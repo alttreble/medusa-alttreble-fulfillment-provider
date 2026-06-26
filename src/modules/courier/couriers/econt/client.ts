@@ -1,15 +1,23 @@
 /**
- * Self-contained Econt client.
+ * Econt client.
  *
- * Modeled directly from econt-sdk/openapi.yaml — we do NOT depend on the
- * external econt-sdk package. Only the endpoints this plugin needs are
- * implemented; extend as the fulfillment-provider work grows.
+ * Thin adapter over the generated Econt SDK (src/generated/econt, produced by
+ * `pnpm gen:clients` from openapi/econt.yaml). It owns only two things the
+ * generated code can't: per-account configuration (base URL + Basic auth, since
+ * credentials come from a stored CourierAccount, not a global singleton) and the
+ * mapping from Econt's shapes into the courier-agnostic UnifiedOffice.
  *
  *   server:  https://ee.econt.com/services        (production)
  *            https://demo.econt.com/ee/services    (test / demo)
- *   auth:    HTTP Basic (base64), applied globally per the spec
+ *   auth:    HTTP Basic, applied as a header on the per-instance client
  */
 
+import { createClient, createConfig } from "../../../../generated/econt/client"
+import {
+  postNomenclaturesNomenclaturesServiceGetOfficesJson,
+  type Office,
+} from "../../../../generated/econt"
+import type { Client } from "../../../../generated/econt/client"
 import {
   CourierClient,
   ListOfficesParams,
@@ -26,123 +34,55 @@ export type EcontClientOptions = EcontCredentials & {
   testMode?: boolean
 }
 
-// --- openapi.yaml: schemas relevant to getOffices -------------------------
-
-type EcontGeoLocation = {
-  latitude?: number
-  longitude?: number
-  confidence?: number
-}
-
-type EcontCountry = {
-  id?: number
-  code2?: string
-  code3?: string
-  name?: string
-  nameEn?: string
-}
-
-type EcontCity = {
-  id?: number
-  country?: EcontCountry
-  postCode?: string
-  name?: string
-  nameEn?: string
-}
-
-type EcontAddress = {
-  id?: number
-  city?: EcontCity
-  fullAddress?: string
-  fullAddressEn?: string
-  quarter?: string
-  street?: string
-  num?: string
-  other?: string
-  location?: EcontGeoLocation
-  zip?: string
-}
-
-type EcontOffice = {
-  id: number
-  code: string
-  isMPS?: boolean
-  isAPS?: boolean
-  name: string
-  nameEn?: string
-  phones?: string[]
-  emails?: string[]
-  address?: EcontAddress
-  info?: string
-  currency?: string
-  language?: string
-}
-
-type GetOfficesRequest = {
-  countryCode?: string
-  cityID?: number
-  showCargoReceptions?: boolean
-  showLC?: boolean
-  servingReceptions?: boolean
-}
-
-type GetOfficesResponse = {
-  offices?: EcontOffice[]
-}
-
 const PRODUCTION_URL = "https://ee.econt.com/services"
 const DEMO_URL = "https://demo.econt.com/ee/services"
 
 export class EcontClient implements CourierClient {
   readonly provider = "econt" as const
 
-  private readonly baseUrl: string
-  private readonly authHeader: string
+  private readonly client: Client
 
   constructor(options: EcontClientOptions) {
-    this.baseUrl = options.testMode ? DEMO_URL : PRODUCTION_URL
+    const baseUrl = options.testMode ? DEMO_URL : PRODUCTION_URL
     const token = Buffer.from(
       `${options.username}:${options.password}`
     ).toString("base64")
-    this.authHeader = `Basic ${token}`
+
+    // A dedicated client per account — never mutate the generated singleton,
+    // which would leak one tenant's credentials into another's requests.
+    this.client = createClient(
+      createConfig({
+        baseUrl,
+        headers: { Authorization: `Basic ${token}` },
+      })
+    )
   }
 
   async listOffices(params: ListOfficesParams = {}): Promise<UnifiedOffice[]> {
-    const body: GetOfficesRequest = {
-      countryCode: params.countryCode ?? "BG",
-    }
-    if (params.cityId !== undefined) {
-      body.cityID = params.cityId
-    }
+    const { data } = await postNomenclaturesNomenclaturesServiceGetOfficesJson({
+      client: this.client,
+      throwOnError: true,
+      body: {
+        countryCode: params.countryCode ?? "BG",
+        ...(params.cityId !== undefined ? { cityID: params.cityId } : {}),
+      },
+    })
 
-    const res = await this.request<GetOfficesResponse>(
-      "Nomenclatures/NomenclaturesService.getOffices.json",
-      body
-    )
-
-    const offices = (res.offices ?? []).map((o) => this.toUnifiedOffice(o))
-
-    if (!params.search) {
-      return offices
-    }
-
-    const needle = params.search.trim().toLowerCase()
-    return offices.filter((o) =>
-      [o.name, o.city, o.address].some((field) =>
-        field?.toLowerCase().includes(needle)
-      )
-    )
+    // Return the full list for this (country, city); free-text `search` is
+    // applied by the aggregation layer so the result can be cached once and
+    // filtered cheaply across many search terms.
+    return (data.offices ?? []).map((o) => this.toUnifiedOffice(o))
   }
 
-  private toUnifiedOffice(office: EcontOffice): UnifiedOffice {
+  private toUnifiedOffice(office: Office): UnifiedOffice {
     const address = office.address
     const city = address?.city
 
     return {
       id: `${this.provider}:${office.code}`,
       provider: this.provider,
-      code: office.code,
-      name: office.name,
+      code: office.code ?? "",
+      name: office.name ?? "",
       city: city?.name ?? "",
       address: address?.fullAddress ?? "",
       postCode: address?.zip ?? city?.postCode,
@@ -152,25 +92,5 @@ export class EcontClient implements CourierClient {
       phones: office.phones,
       type: office.isAPS ? "aps" : office.isMPS ? "mps" : "office",
     }
-  }
-
-  private async request<T>(path: string, body: object): Promise<T> {
-    const response = await fetch(`${this.baseUrl}/${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: this.authHeader,
-      },
-      body: JSON.stringify(body),
-    })
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "")
-      throw new Error(
-        `Econt API error (${response.status} ${response.statusText}) on ${path}: ${text}`
-      )
-    }
-
-    return (await response.json()) as T
   }
 }

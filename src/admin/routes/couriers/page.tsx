@@ -31,6 +31,10 @@ type SafeCourier = {
 // configured so the merchant can set it up from here.
 const SUPPORTED_COURIERS: { provider: string; label: string }[] = [
   { provider: "econt", label: "Econt Express" },
+  // The carrier's API is Speedy; it's branded DPD in parts of the region, so
+  // the label carries both names. The stored provider key stays "speedy" to
+  // match the courier client registry.
+  { provider: "speedy", label: "Speedy (DPD)" },
 ]
 
 const COURIERS_QUERY_KEY = ["couriers"]
@@ -240,7 +244,7 @@ const EditCourierDrawer = ({
               <Input
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
-                placeholder="Econt Express"
+                placeholder={courier.label || courier.provider}
               />
             </div>
 

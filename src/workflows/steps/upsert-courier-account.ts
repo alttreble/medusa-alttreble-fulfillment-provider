@@ -1,6 +1,8 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { Modules } from "@medusajs/framework/utils"
 import { COURIER_MODULE } from "../../modules/courier"
 import CourierModuleService from "../../modules/courier/service"
+import { invalidateOfficesCache } from "../../modules/courier/couriers/offices-cache"
 
 export type UpsertCourierAccountInput = {
   provider: string
@@ -54,6 +56,8 @@ export const upsertCourierAccountStep = createStep(
         id: existing.id,
         ...data,
       })
+      // Credentials / test_mode / enabled changes affect the office list.
+      await invalidateOfficesCache(container.resolve(Modules.CACHE))
       return new StepResponse(updated, {
         action: "update",
         previous,
@@ -61,6 +65,7 @@ export const upsertCourierAccountStep = createStep(
     }
 
     const created = await service.createCourierAccounts(data)
+    await invalidateOfficesCache(container.resolve(Modules.CACHE))
     return new StepResponse(created, {
       action: "create",
       id: created.id,

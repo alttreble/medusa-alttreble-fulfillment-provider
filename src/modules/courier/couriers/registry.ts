@@ -8,6 +8,7 @@
 
 import { CourierClient, CourierProvider } from "./types"
 import { EcontClient } from "./econt/client"
+import { SpeedyClient } from "./speedy/client"
 
 export type CourierAccountConfig = {
   provider: CourierProvider | string
@@ -37,7 +38,23 @@ export function buildCourierClient(
       })
     }
 
-    // case "speedy": return new SpeedyClient(...)  // added later
+    case "speedy": {
+      const creds = account.credentials ?? {}
+      const username = creds.username
+      const password = creds.password
+
+      if (typeof username !== "string" || typeof password !== "string") {
+        throw new Error(
+          `Speedy account is missing "username"/"password" credentials`
+        )
+      }
+
+      return new SpeedyClient({
+        username,
+        password,
+        testMode: account.test_mode,
+      })
+    }
 
     default:
       throw new Error(

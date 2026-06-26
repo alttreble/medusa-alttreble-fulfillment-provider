@@ -75,9 +75,9 @@ class DPDFulfillmentProviderService extends AbstractFulfillmentProviderService {
 
     return [
       {
-        id: "dpd-office-pickup",
+        id: "office-pickup",
         name: "DPD Fulfillment Office Pickup",
-      }
+      },
     ]
   }
 

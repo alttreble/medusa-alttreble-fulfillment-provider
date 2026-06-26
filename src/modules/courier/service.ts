@@ -3,6 +3,7 @@ import { Logger } from "@medusajs/framework/types"
 import CourierAccount from "./models/courier-account"
 import { buildCourierClient } from "./couriers/registry"
 import { ListOfficesParams, UnifiedOffice } from "./couriers/types"
+import { filterOfficesBySearch } from "./couriers/search"
 
 type InjectedDependencies = {
   logger: Logger
@@ -64,7 +65,7 @@ class CourierModuleService extends MedusaService({
       })
     )
 
-    return results.flat()
+    return filterOfficesBySearch(results.flat(), params.search)
   }
 }
 
