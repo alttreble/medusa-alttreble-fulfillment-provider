@@ -1,0 +1,20 @@
+{
+  "title": "Куриери",
+  "subtitle": "Настройте API данните на куриерите, използвани за доставка до офис и до адрес.",
+  "test": "Тест",
+  "user": "Потребител",
+  "passwordSet": "Паролата е зададена",
+  "noPassword": "Няма парола",
+  "configure": "Настройка",
+  "saved": "{{name}} е запазен",
+  "saveError": "Грешка при запазване на куриера",
+  "configureTitle": "Настройка на {{name}}",
+  "displayName": "Показвано име",
+  "apiUsername": "API потребител",
+  "apiPassword": "API парола",
+  "passwordKeepPlaceholder": "•••••••• (оставете празно, за да запазите)",
+  "passwordEnterPlaceholder": "Въведете парола",
+  "testMode": "Тестов режим",
+  "testModeDesc": "Използване на демо API адреса на куриера.",
+  "enabledDesc": "Включване на този куриер при събиране на офисите."
+}

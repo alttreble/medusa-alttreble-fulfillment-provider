@@ -1,0 +1,20 @@
+{
+  "title": "Couriers",
+  "subtitle": "Configure courier API credentials used for office pickup and shipping.",
+  "test": "Test",
+  "user": "User",
+  "passwordSet": "Password set",
+  "noPassword": "No password",
+  "configure": "Configure",
+  "saved": "{{name}} saved",
+  "saveError": "Failed to save courier",
+  "configureTitle": "Configure {{name}}",
+  "displayName": "Display name",
+  "apiUsername": "API username",
+  "apiPassword": "API password",
+  "passwordKeepPlaceholder": "•••••••• (leave blank to keep)",
+  "passwordEnterPlaceholder": "Enter password",
+  "testMode": "Test mode",
+  "testModeDesc": "Use the courier's demo API endpoint.",
+  "enabledDesc": "Include this courier when aggregating offices."
+}

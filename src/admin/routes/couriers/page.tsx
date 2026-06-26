@@ -14,6 +14,7 @@ import {
 } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { sdk } from "../../lib/client"
 
 type SafeCourier = {
@@ -43,6 +44,9 @@ type FormState = {
 }
 
 const CouriersPage = () => {
+  const { t } = useTranslation("couriers")
+  // Core dashboard strings (default "translation" namespace) we can reuse.
+  const { t: tg } = useTranslation()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<SafeCourier | null>(null)
 
@@ -75,10 +79,9 @@ const CouriersPage = () => {
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <div>
-          <Heading level="h2">Couriers</Heading>
+          <Heading level="h2">{t("title")}</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            Configure courier API credentials used for office pickup and
-            shipping.
+            {t("subtitle")}
           </Text>
         </div>
       </div>
@@ -86,7 +89,7 @@ const CouriersPage = () => {
       {isLoading ? (
         <div className="px-6 py-4">
           <Text size="small" className="text-ui-fg-subtle">
-            Loading…
+            {tg("labels.loading")}
           </Text>
         </div>
       ) : (
@@ -123,6 +126,8 @@ const CourierRow = ({
   courier: SafeCourier
   onEdit: () => void
 }) => {
+  const { t } = useTranslation("couriers")
+  const { t: tg } = useTranslation()
   const username = (courier.credentials?.username as string) || "—"
 
   return (
@@ -133,21 +138,21 @@ const CourierRow = ({
             {courier.label || courier.provider}
           </Text>
           <Badge size="2xsmall" color={courier.is_enabled ? "green" : "grey"}>
-            {courier.is_enabled ? "Enabled" : "Disabled"}
+            {courier.is_enabled ? tg("general.enabled") : tg("general.disabled")}
           </Badge>
           {courier.test_mode && (
             <Badge size="2xsmall" color="orange">
-              Test
+              {t("test")}
             </Badge>
           )}
         </div>
         <Text size="small" className="text-ui-fg-subtle">
-          User: {username} ·{" "}
-          {courier.password_set ? "Password set" : "No password"}
+          {t("user")}: {username} ·{" "}
+          {courier.password_set ? t("passwordSet") : t("noPassword")}
         </Text>
       </div>
       <Button size="small" variant="secondary" onClick={onEdit}>
-        Configure
+        {t("configure")}
       </Button>
     </div>
   )
@@ -164,6 +169,8 @@ const EditCourierDrawer = ({
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) => {
+  const { t } = useTranslation("couriers")
+  const { t: tg } = useTranslation()
   const [form, setForm] = useState<FormState>({
     label: courier.label || "",
     username: (courier.credentials?.username as string) || "",
@@ -190,11 +197,11 @@ const EditCourierDrawer = ({
         body: payload,
       }),
     onSuccess: () => {
-      toast.success(`${courier.label || courier.provider} saved`)
+      toast.success(t("saved", { name: courier.label || courier.provider }))
       onSaved()
     },
     onError: (e: Error) => {
-      toast.error(e.message || "Failed to save courier")
+      toast.error(e.message || t("saveError"))
     },
   })
 
@@ -222,14 +229,14 @@ const EditCourierDrawer = ({
       <Drawer.Content>
         <Drawer.Header>
           <Drawer.Title>
-            Configure {courier.label || courier.provider}
+            {t("configureTitle", { name: courier.label || courier.provider })}
           </Drawer.Title>
         </Drawer.Header>
 
         <Drawer.Body className="flex-1 overflow-auto">
           <div className="flex flex-col gap-y-4">
             <div className="flex flex-col gap-y-2">
-              <Label size="small">Display name</Label>
+              <Label size="small">{t("displayName")}</Label>
               <Input
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
@@ -238,7 +245,7 @@ const EditCourierDrawer = ({
             </div>
 
             <div className="flex flex-col gap-y-2">
-              <Label size="small">API username</Label>
+              <Label size="small">{t("apiUsername")}</Label>
               <Input
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -247,24 +254,24 @@ const EditCourierDrawer = ({
             </div>
 
             <div className="flex flex-col gap-y-2">
-              <Label size="small">API password</Label>
+              <Label size="small">{t("apiPassword")}</Label>
               <Input
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 placeholder={
                   courier.password_set
-                    ? "•••••••• (leave blank to keep)"
-                    : "Enter password"
+                    ? t("passwordKeepPlaceholder")
+                    : t("passwordEnterPlaceholder")
                 }
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <Label size="small">Test mode</Label>
+                <Label size="small">{t("testMode")}</Label>
                 <Text size="small" className="text-ui-fg-subtle">
-                  Use the courier's demo API endpoint.
+                  {t("testModeDesc")}
                 </Text>
               </div>
               <Switch
@@ -277,9 +284,9 @@ const EditCourierDrawer = ({
 
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <Label size="small">Enabled</Label>
+                <Label size="small">{tg("general.enabled")}</Label>
                 <Text size="small" className="text-ui-fg-subtle">
-                  Include this courier when aggregating offices.
+                  {t("enabledDesc")}
                 </Text>
               </div>
               <Switch
@@ -299,7 +306,7 @@ const EditCourierDrawer = ({
               variant="secondary"
               disabled={save.isPending}
             >
-              Cancel
+              {tg("actions.cancel")}
             </Button>
           </Drawer.Close>
           <Button
@@ -307,7 +314,7 @@ const EditCourierDrawer = ({
             onClick={handleSubmit}
             isLoading={save.isPending}
           >
-            Save
+            {tg("actions.save")}
           </Button>
         </Drawer.Footer>
       </Drawer.Content>
